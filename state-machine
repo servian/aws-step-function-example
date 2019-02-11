@@ -1,0 +1,109 @@
+{
+  "StartAt": "ReadCSV",
+  "States": {
+    "ReadCSV": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:XXXXXXXXXXXXXXXX:function:lambda-read-CSV",
+      "Next": "ProductOrServiceChoice"
+    }, 
+    "ProductOrServiceChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.reviewType",
+          "StringEquals": "Product",
+          "Next": "ProductSentimentAnalysis"
+        },
+        {
+          "Variable": "$.reviewType",
+          "StringEquals": "Service",
+          "Next": "ServiceSentimentAnalysis"
+        }
+      ],
+      "Default": "CategorisationFail"
+    },
+    "CategorisationFail": {
+      "Type": "Fail",
+      "Cause": "Input CSV could not be categorised into 'Product' or 'Service'."
+    },
+    "ProductSentimentAnalysis": {
+      "Type" : "Task",
+      "Resource": "arn:aws:lambda:XXXXXXXXXXXXXXXX:function:lambda-sentiment",
+      "Next": "ProductResultChoice"
+    },
+
+    "ServiceSentimentAnalysis": {
+      "Type" : "Task",
+      "Resource": "arn:aws:lambda:XXXXXXXXXXXXXXXX:function:lambda-sentiment",
+      "Next": "ServiceResultChoice"
+    },
+    "ProductResultChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+      "Or": [
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "POSITIVE"
+        },
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "NEUTRAL"
+        }
+        ],
+        "Next": "WriteToDB"
+        },
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "NEGATIVE",
+          "Next": "PublishToSNS"
+        }
+      ],
+      "Default": "SentimentFail"
+    },
+    "SentimentFail": {
+      "Type": "Fail",
+      "Cause": "Sentiment Analysis Failed!"
+    },
+    "ServiceResultChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+      "Or": [
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "POSITIVE"
+        },
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "NEUTRAL"
+        }
+        ],
+        "Next": "WriteToDB"
+        },
+        {
+          "Variable": "$.sentiment",
+          "StringEquals": "NEGATIVE",
+          "Next": "PublishToSNS"
+        }
+      ],
+      "Default": "SentimentFail"
+    },
+   "PublishToSNS": 
+    {
+     "Type": "Task",
+     "Resource": "arn:aws:lambda:XXXXXXXXXXXXXXXX:function:lambda-SNS",
+      "Next": "WriteToDB"
+    },
+    "WriteToDB": 
+    {
+     "Type": "Task",
+     "Resource": "arn:aws:lambda:XXXXXXXXXXXXXXXX:function:lambda-write-db",
+      "Next": "Success"
+    }, 
+     "Success": 
+    {
+      "Type": "Succeed"
+    }
+  }
+}
